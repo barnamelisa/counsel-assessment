@@ -11,7 +11,20 @@ export type ReviewFilters = {
 export type EntryPatch = Partial<
   Pick<Entry, 'clientId' | 'billable' | 'reviewed'>
 >;
-export type UndoRecord = { before: Data; ids: string[] };
+export type UndoRecord = { before: Entry[]; after: Entry[] };
+
+export function sameEntry(a: Entry, b: Entry) {
+  return (
+    a.id === b.id &&
+    a.date === b.date &&
+    a.minutes === b.minutes &&
+    a.clientId === b.clientId &&
+    a.billable === b.billable &&
+    a.description === b.description &&
+    a.employee === b.employee &&
+    !!a.reviewed === !!b.reviewed
+  );
+}
 
 export function selectWeek(entries: Entry[], week: string) {
   return entries.filter(
@@ -92,10 +105,37 @@ export function updateEntries(
       if (!selected.has(entry.id)) return entry;
       const merged = { ...entry, ...patch };
       validateEntry(merged, data.clients);
-      return merged;
+      // Moving client or changing billability is a meaningful correction:
+      // the entry must be reviewed again unless the patch sets it explicitly.
+      const corrected =
+        merged.clientId !== entry.clientId ||
+        merged.billable !== entry.billable;
+      return {
+        ...merged,
+        reviewed: patch.reviewed ?? (corrected ? false : entry.reviewed),
+      };
     }),
   };
 }
-export function undoEntries(operation: UndoRecord): Data {
-  return operation.before;
+export function undoEntries(data: Data, operation: UndoRecord): Data {
+  const conflicts = operation.after.filter((after) => {
+    const current = data.entries.find((e) => e.id === after.id);
+    return !current || !sameEntry(current, after);
+  });
+  if (conflicts.length)
+    throw new Error(
+      `Can't undo: ${conflicts.length} of the affected ${conflicts.length === 1 ? 'entry was' : 'entries were'} changed after this action. Undoing would erase newer work, so nothing was changed.`,
+    );
+  const restore = new Map(operation.before.map((e) => [e.id, e]));
+  return {
+    ...data,
+    entries: data.entries.map((e) => restore.get(e.id) ?? e),
+  };
+}
+export function planUndo(before: Data, after: Data, ids: string[]): UndoRecord {
+  const set = new Set(ids);
+  return {
+    before: before.entries.filter((e) => set.has(e.id)),
+    after: after.entries.filter((e) => set.has(e.id)),
+  };
 }
