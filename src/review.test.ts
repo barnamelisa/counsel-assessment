@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 import pilot from './fixtures/pilot-workspace.json';
 import { decodeData } from './model';
 import type { Data, Entry } from './model';
-import { planUndo, saveEntry, undoEntries, updateEntries } from './review';
+import {
+  countNeedingReview,
+  planUndo,
+  saveEntry,
+  splitSelection,
+  undoEntries,
+  updateEntries,
+} from './review';
 
 const data: Data = decodeData(JSON.stringify(pilot));
 const find = (d: Data, text: string): Entry => {
@@ -70,5 +77,29 @@ describe('undo', () => {
       billable: !shareholder.billable,
     });
     expect(() => undoEntries(edited, undo)).toThrow(/Can't undo/);
+  });
+});
+describe('selection scope', () => {
+  it('splits selection into in-view and hidden-by-filter entries', () => {
+    const [a, b, c] = data.entries;
+    const { inView, hidden } = splitSelection(
+      [a.id, b.id, 'gone'],
+      [a, c],
+      data.entries,
+    );
+    expect(inView).toEqual([a.id]);
+    expect(hidden).toEqual([b.id]);
+  });
+});
+
+describe('needs-review count', () => {
+  it('counts unreviewed entries in the week only', () => {
+    const week = '2026-09-28';
+    const inWeek = data.entries.filter(
+      (e) => e.date >= week && e.date <= '2026-10-04',
+    );
+    expect(countNeedingReview(data.entries, week)).toBe(
+      inWeek.filter((e) => !e.reviewed).length,
+    );
   });
 });

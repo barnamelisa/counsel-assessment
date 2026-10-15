@@ -21,8 +21,10 @@ import {
   weekStart,
 } from '../model';
 import {
+  countNeedingReview,
   planUndo,
   selectReview,
+  splitSelection,
   undoEntries,
   updateEntries,
 } from '../review';
@@ -65,20 +67,25 @@ export function ReviewPage({
     search,
   });
   const summary = totals(visible);
-  const selectedIds = selected.filter((id) =>
-    data.entries.some((e) => e.id === id),
+  const needsReview = countNeedingReview(data.entries, week);
+  // Actions only ever touch selected entries that are visible right now.
+  // Selected entries hidden by filters/week are kept but never changed.
+  const { inView: selectedIds, hidden: hiddenSelected } = splitSelection(
+    selected,
+    visible,
+    data.entries,
   );
   const employees = [...new Set(data.entries.map((e) => e.employee))].sort();
   function changeView(update: () => void) {
     update();
   }
-  function apply(ids: string[], patch: EntryPatch) {
+  function apply(ids: string[], patch: EntryPatch, keepSelection = false) {
     setError('');
     try {
       const next = updateEntries(data, ids, patch);
       save(next);
       setOperation(planUndo(data, next, ids));
-      setSelected([]);
+      if (!keepSelection) setSelected(hiddenSelected);
       setMessage(
         `Updated ${ids.length} ${ids.length === 1 ? 'entry' : 'entries'}.`,
       );
@@ -210,6 +217,17 @@ export function ReviewPage({
             <option value="pending">Needs review</option>
             <option value="reviewed">Reviewed</option>
           </select>
+          <button
+            className="button secondary small"
+            aria-pressed={status === 'pending'}
+            onClick={() =>
+              changeView(() =>
+                setStatus(status === 'pending' ? 'all' : 'pending'),
+              )
+            }
+          >
+            Needs review this week ({needsReview})
+          </button>
         </div>
         <div className="bulk-toolbar">
           <label className="select-visible">
@@ -221,12 +239,29 @@ export function ReviewPage({
               }
               disabled={!visible.length || readOnly}
               onChange={(e) =>
-                setSelected(e.target.checked ? visible.map((e) => e.id) : [])
+                setSelected(
+                  e.target.checked
+                    ? [...hiddenSelected, ...visible.map((v) => v.id)]
+                    : hiddenSelected,
+                )
               }
             />
             Select visible
           </label>
-          <span className="selection-count">{selectedIds.length} selected</span>
+          <span className="selection-count">
+            {selectedIds.length} selected in view
+          </span>
+          {hiddenSelected.length > 0 && (
+            <span className="selection-count" role="status">
+              +{hiddenSelected.length} hidden by filters, not affected{' '}
+              <button
+                className="text-button"
+                onClick={() => setSelected(selectedIds)}
+              >
+                Deselect hidden
+              </button>
+            </span>
+          )}
           <select
             aria-label="Bulk action"
             value={action}
@@ -321,8 +356,8 @@ export function ReviewPage({
                       onChange={(e) =>
                         setSelected(
                           e.target.checked
-                            ? [...selectedIds, entry.id]
-                            : selectedIds.filter((id) => id !== entry.id),
+                            ? [...selected, entry.id]
+                            : selected.filter((id) => id !== entry.id),
                         )
                       }
                     />
@@ -349,7 +384,7 @@ export function ReviewPage({
                     disabled={readOnly}
                     aria-label={`${entry.reviewed ? 'Reopen' : 'Review'} ${entry.description || client.name}`}
                     onClick={() =>
-                      apply([entry.id], { reviewed: !entry.reviewed })
+                      apply([entry.id], { reviewed: !entry.reviewed }, true)
                     }
                   >
                     {entry.reviewed && <Check size={13} />}{' '}
