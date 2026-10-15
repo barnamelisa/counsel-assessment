@@ -21,6 +21,7 @@ import {
   weekStart,
 } from '../model';
 import {
+  planUndo,
   selectReview,
   undoEntries,
   updateEntries,
@@ -76,7 +77,7 @@ export function ReviewPage({
     try {
       const next = updateEntries(data, ids, patch);
       save(next);
-      setOperation({ before: data, ids });
+      setOperation(planUndo(data, next, ids));
       setSelected([]);
       setMessage(
         `Updated ${ids.length} ${ids.length === 1 ? 'entry' : 'entries'}.`,
@@ -280,11 +281,12 @@ export function ReviewPage({
               disabled={readOnly}
               onClick={() => {
                 try {
-                  save(undoEntries(operation));
+                  save(undoEntries(data, operation));
                   setOperation(null);
                   setError('');
                   setMessage('Last review action undone.');
                 } catch (e) {
+                  setOperation(null);
                   setError((e as Error).message);
                 }
               }}
