@@ -1,13 +1,13 @@
 # Release handover
 
 ## Changed
-Improved Counsel’s weekly review workflow for Friday close. Review totals and CSV export follow the active filtered list. Meaningful corrections require review again, while unchanged saves preserve review status. Undo is scoped to affected entries and rejects conflicting changes. Selection distinguishes visible entries from records hidden by filters. Added a “Needs review this week” toggle and count for the active week.
+Improved Counsel’s weekly review workflow for Friday close. Totals and CSV exports follow the active filtered view. Meaningful corrections require review again, unchanged saves preserve review status, and undo rejects conflicting edits instead of silently overwriting newer work. Selection distinguishes visible entries from records hidden by filters. Added a “Needs review this week” shortcut and count.
 
 ## Verified
-Added review logic tests and ran the automated checks. The review and model tests passed in the initial run (29 tests); five persistence tests initially failed because localStorage was unavailable in the test environment. The test setup was adjusted to expose the JSDOM localStorage. Final test and build outcomes should be confirmed against the latest run before release. Prettier passed for the three modified review files.
+Added review logic tests. Locally, 19 model tests and 10 review tests passed; five persistence tests failed because `localStorage` was unavailable in my local Vitest environment. Prettier passed for the modified review files. After these local failures, the latest GitHub Actions run passed on Node.js 24, including `npm run check` and the Playwright end-to-end suite. This confirms the automated CI checks pass in that environment, although the local environment discrepancy remains unexplained.
 
 ## Deferred and risks
-Dark theme and repeat yesterday’s entry were deferred to prioritize review correctness. Remaining risks include browser-level behavior, keyboard accessibility, persistence across tabs, and regression coverage. I would release this as a pilot only after the final automated checks and critical review flows pass.
+Deferred dark theme and repeat-yesterday functionality. Remaining risks include manual browser exploration, keyboard accessibility, and the local persistence-test environment discrepancy. I would consider this suitable for a limited pilot, with the local test discrepancy investigated before broader release.
 
 ## AI use
-Used AI assistance to investigate failures, review implementation choices, and draft tests and documentation. Inspected the relevant source and test files, ran commands locally, and treated test output as the source of truth. I remain responsible for the final code and verification.
+Used AI assistance to investigate test failures, review implementation choices, and improve tests and documentation. Inspected source code and test output and distinguished local failures from successful CI results. I remain responsible for the submitted code and its remaining risks.
