@@ -22,7 +22,6 @@ import {
 } from '../model';
 import {
   selectReview,
-  selectWeek,
   undoEntries,
   updateEntries,
 } from '../review';
@@ -57,7 +56,6 @@ export function ReviewPage({
   const [operation, setOperation] = useState<UndoRecord | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const weekEntries = selectWeek(data.entries, week);
   const visible = selectReview(data.entries, data.clients, {
     week,
     clientId,
@@ -65,9 +63,7 @@ export function ReviewPage({
     status,
     search,
   });
-  const summaryEntries = weekEntries;
-  const exportEntries = weekEntries;
-  const summary = totals(summaryEntries);
+  const summary = totals(visible);
   const selectedIds = selected.filter((id) =>
     data.entries.some((e) => e.id === id),
   );
@@ -125,11 +121,11 @@ export function ReviewPage({
           disabled={!visible.length}
           onClick={() => {
             download(
-              csv(exportEntries, data.clients),
+              csv(visible, data.clients),
               `counsel-review-${week}.csv`,
               'text/csv;charset=utf-8',
             );
-            setMessage(`Exported ${exportEntries.length} entries.`);
+            setMessage(`Exported ${visible.length} entries.`);
           }}
         >
           <ArrowDownToLine size={16} />
