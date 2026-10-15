@@ -139,3 +139,20 @@ export function planUndo(before: Data, after: Data, ids: string[]): UndoRecord {
     after: after.entries.filter((e) => set.has(e.id)),
   };
 }
+
+export function splitSelection(
+  selected: string[],
+  visible: Entry[],
+  all: Entry[],
+) {
+  const inViewIds = new Set(visible.map((e) => e.id));
+  const existing = new Set(all.map((e) => e.id));
+  return {
+    inView: selected.filter((id) => inViewIds.has(id)),
+    hidden: selected.filter((id) => existing.has(id) && !inViewIds.has(id)),
+  };
+}
+
+export function countNeedingReview(entries: Entry[], week: string) {
+  return selectWeek(entries, week).filter((e) => !e.reviewed).length;
+}
